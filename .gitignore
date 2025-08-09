@@ -1,0 +1,27 @@
+# ESP-IDF build artifacts
+/build/
+sdkconfig
+sdkconfig.old
+flasher_args
+
+# Temporary files
+*.bin
+*.elf
+*.hex
+*.map
+*.o
+*.log
+
+# IDE and Editor files
+/.vscode/
+.DS_Store
+.idea/
+*~
+
+# Python cache
+__pycache__/
+
+# Dependencies
+# You might want to ignore the esp-idf directory if it's a submodule
+# or if you manage its path separately.
+# /esp-idf/
