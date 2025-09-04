@@ -7,8 +7,8 @@
 
 #include "common.h"
 
-#define DOOR_STATE_PIN 2
-#define DOOR_LOCK_STATE_PIN 5
+extern const gpio_num_t doorStatePin;
+extern const gpio_num_t doorLockStatePin;
 
 typedef enum {
   DOOR_OPENED,

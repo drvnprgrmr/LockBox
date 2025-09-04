@@ -1,2 +1,2 @@
-idf_component_register(SRCS "door.c" "passcode.c" "keypad.c" "KeypadLock.c"
+idf_component_register(SRCS "passcode.cpp" "door.cpp" "keypad.cpp" "KeypadLock.cpp"
                     INCLUDE_DIRS ".")

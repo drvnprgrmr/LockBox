@@ -12,7 +12,7 @@
 const char popChar = '*';
 const char validateChar = '#';
 
-void app_main(void)
+extern "C" void app_main(void)
 {
   initPins();
 

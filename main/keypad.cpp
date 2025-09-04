@@ -1,7 +1,7 @@
 #include "keypad.h"
 
-const byte rowPins[ROW_SIZE] = {13, 12, 14, 27};
-const byte colPins[COL_SIZE] = {26, 25, 33, 32};
+const gpio_num_t rowPins[ROW_SIZE] = {GPIO_NUM_13, GPIO_NUM_12, GPIO_NUM_14, GPIO_NUM_27};
+const gpio_num_t colPins[COL_SIZE] = {GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33, GPIO_NUM_32};
 
 const char keys[ROW_SIZE][COL_SIZE] = {
     {'1', '2', '3', 'A'},

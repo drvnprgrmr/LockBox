@@ -25,3 +25,6 @@ __pycache__/
 # You might want to ignore the esp-idf directory if it's a submodule
 # or if you manage its path separately.
 # /esp-idf/
+
+# ignore markdown files in the root directory
+/*.md
