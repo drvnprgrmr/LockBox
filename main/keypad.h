@@ -16,10 +16,12 @@ extern "C"
 #endif
 
 #include <array>
+#include <queue>
 
-static constexpr char const *const TAG = "KEYPAD";
+// todo: fix
+static char const *const KeypadTAG = "KEYPAD";
 
-size_t constexpr updateListSize = 4;
+static size_t const MAX_KEY_BUFFER_SIZE = 10; // max keys to hold in buffer
 
 // current level of the key
 enum class KeyLevel
@@ -36,9 +38,6 @@ enum class KeyState
   PRESSED,  // key is high and was not active previously
   HELD,     // key is high and was active previously (for a defined time)
 };
-
-// use interrupt instead
-// char const NULL_KEY = '\0'; // represents a key that's not used
 
 struct Key
 {
@@ -58,77 +57,71 @@ public:
     // create the key matrix
     for (size_t i = 0; i < rows; i++)
     {
-      for (size_t j = 0; j < cols; j++)
+      for (size_t c = 0; c < cols; c++)
       {
-        m_keys[i][j] = Key{keymap[i][j], KeyState::IDLE};
+        m_keys[i][c] = Key{keymap[i][c], KeyState::IDLE};
       }
     }
 
     // init pins
     initPins();
 
-    ESP_LOGI(TAG, "Keypad initialized!");
+    ESP_LOGI(KeypadTAG, "Keypad initialized!");
   }
 
 public:
-  char getKey();
-  char getKeys();
+  // public key buffers that will be updated whenever a key changes
+  std::queue<char> pressedKeyBuffer, heldKeyBuffer;
 
-  void setDebounceTime(uint64_t); // time in xx
-  void setHoldTime(uint64_t);
+public:
+  /* === Background tasks approach === */
 
-  // Scan the pins to detect pressed ones.
-  void scanKeys()
+  void beginScanTask()
   {
-    // ESP_LOGI(TAG, "Cur: %llu last: %llu debounce: %llu\n", esp_timer_get_time(), m_lastScanTime, m_debounceTime);
+    xTaskCreate(
+        Keypad::foreverScanTask,
+        "Scan Keypad",
+        1024,
+        this,
+        1,
+        NULL);
+  }
 
-    if (esp_timer_get_time() - m_lastScanTime > m_debounceTime)
+  void stopScanTask() {}
+
+public:
+  /* === Direct access approach ===  */
+
+  esp_err_t setDebounceTime(uint64_t debounceTime)
+  {
+    if (debounceTime > 1 * 1000 && debounceTime < m_holdTime - 100 * 1000)
     {
+      m_debounceTime = debounceTime;
+      return ESP_OK;
+    }
+    return ESP_ERR_INVALID_ARG;
+  }
 
-      // keeps track of the logic level of a key
-      KeyLevel level{};
+  esp_err_t setHoldTime(uint64_t holdTime)
+  {
+    if (holdTime > m_debounceTime - 100 * 1000)
+    {
+      m_holdTime = holdTime;
+      return ESP_OK;
+    }
+    return ESP_ERR_INVALID_ARG;
+  }
 
-      for (size_t r = 0; r < rows; r++)
-      {
-        for (size_t c = 0; c < cols; c++)
-        {
-          // set the column pin high
-          gpio_set_level(m_columnPins[c], 1);
-
-          // read the row pin to get the state of the key
-          level = gpio_get_level(m_rowPins[r]) ? KeyLevel::HIGH : KeyLevel::LOW;
-
-          // print level
-          // ESP_LOGI(TAG, "Level: %i\n", level);
-
-          // update the key
-          updateKey(r, c, level);
-
-          // reset the column pin low
-          gpio_set_level(m_columnPins[c], 0);
-        }
-      }
-
-      m_lastScanTime = esp_timer_get_time();
+  // scan the keys forever
+  void foreverScan()
+  {
+    while (true)
+    {
+      scanKeys();
+      vTaskDelay(1);
     }
   }
 
-private:
-  // a matrix to manage each key of the keypad
-  std::array<std::array<Key, cols>, rows> m_keys{};
-
-  std::array<gpio_num_t, rows> m_rowPins;
-  std::array<gpio_num_t, cols> m_columnPins;
-
-  /* times in microseconds (us) */
-  uint64_t m_lastScanTime{0};
-  uint64_t m_debounceTime{50 * 1000}; // minimum time between scans
-  uint64_t m_holdTime{700 * 1000};    // how long a key should be pressed down to be considered held
-
-  // list to hold updates
-  std::array<Key const *const, updateListSize> pressedList{}, heldList{};
-
-private:
   void initPins()
   {
     // initialize the row pins
@@ -152,10 +145,62 @@ private:
     }
   }
 
+  void scanKeys()
+  {
+    if (esp_timer_get_time() - m_lastScanTime > m_debounceTime)
+    {
+      // keeps track of the logic level of a key
+      KeyLevel level{};
+
+      for (size_t r = 0; r < rows; r++)
+      {
+        for (size_t c = 0; c < cols; c++)
+        {
+          // set the column pin high
+          gpio_set_level(m_columnPins[c], 1);
+
+          // read the row pin to get the state of the key
+          level = gpio_get_level(m_rowPins[r]) ? KeyLevel::HIGH : KeyLevel::LOW;
+
+          // update the key
+          updateKey(r, c, level);
+
+          // reset the column pin low
+          gpio_set_level(m_columnPins[c], 0);
+        }
+      }
+
+      m_lastScanTime = esp_timer_get_time();
+    }
+  }
+
+private:
+  // a matrix to manage each key of the keypad
+  std::array<std::array<Key, cols>, rows> m_keys{};
+
+  std::array<gpio_num_t, rows> m_rowPins;
+  std::array<gpio_num_t, cols> m_columnPins;
+
+  /* times are in microseconds (us) */
+  uint64_t m_lastScanTime{0};
+  uint64_t m_debounceTime{10 * 1000}; // minimum time between scans
+  uint64_t m_holdTime{500 * 1000};    // how long a key should be pressed down to be considered held
+
+private:
+  static void foreverScanTask(void *pvParameters)
+  {
+    Keypad *instance = static_cast<Keypad *>(pvParameters);
+
+    instance->foreverScan();
+
+    // delete task if foreverScan ever returns
+    vTaskDelete(NULL);
+  }
+
   void updateKey(size_t r, size_t c, KeyLevel level)
   {
     // get a reference of the key to be updated
-    Key& key = m_keys[r][c];
+    Key &key = m_keys[r][c];
 
     // current key level is high
     if (level == KeyLevel::HIGH)
@@ -166,8 +211,14 @@ private:
         // change the key to a pressed state
         key.state = KeyState::PRESSED;
 
+        if (pressedKeyBuffer.size() <= MAX_KEY_BUFFER_SIZE)
+        {
+          // push the pressed key to the queue
+          pressedKeyBuffer.push(key.chr);
+        }
+
         // log a key press
-        ESP_LOGI(TAG, "Key pressed: %c\n", key.chr);
+        ESP_LOGD(KeypadTAG, "Key pressed: %c\n", key.chr);
 
         // set the time of transition
         key.holdTimer = esp_timer_get_time();
@@ -178,8 +229,14 @@ private:
         // remained high
         key.state = KeyState::HELD;
 
+        if (heldKeyBuffer.size() <= MAX_KEY_BUFFER_SIZE)
+        {
+          // push the held key into a queue
+          heldKeyBuffer.push(key.chr);
+        }
+
         // log a held key
-        ESP_LOGI(TAG, "Key held: %c\n", key.chr);
+        ESP_LOGD(KeypadTAG, "Key held: %c\n", key.chr);
       }
     }
 
@@ -199,9 +256,4 @@ private:
       }
     }
   }
-
-  // todo: add other list but create config to select which to update
-  // todo: for better memory efficiency
-  void updatePressed(char) {}
-  void updateHold() {}
 };

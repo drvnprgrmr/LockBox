@@ -9,45 +9,15 @@
 #include "door.h"
 #include "passcode.h"
 
+static char const *const TAG = "APP_MAIN";
+
 const char popChar = '*';
 const char validateChar = '#';
 
 extern "C" void app_main(void)
 {
-  // initPins();
-
-  // initDoor();
-
-  // while (true)
-  // {
-  //   // add delay to please the watchdog
-  //   vTaskDelay(50 / portTICK_PERIOD_MS);
-
-  //   // check the keypad for keypresses
-  //   scanPins();
-
-  //   if (!onHold)
-  //   {
-
-  //     if (curKey == popChar)
-  //     {
-  //       popPasscode();
-  //       continue;
-  //     }
-  //     else if (curKey == validateChar)
-  //     {
-  //       if (validatePasscode())
-  //       {
-  //         unlockDoor();
-  //         continue;
-  //       };
-  //     }
-
-  //     // add key to input passcode
-  //     appendPasscode(curKey);
-  //   }
-
-  // }
+  // debug
+  esp_log_level_set("*", ESP_LOG_INFO);
 
   int const cols = 4;
   int const rows = 4;
@@ -59,9 +29,17 @@ extern "C" void app_main(void)
                                                       {'*', '0', '#', 'D'}}};
 
   Keypad<rows, cols> keypad{keymap, rowPins, columnPins};
+  keypad.beginScanTask();
+
   while (true)
   {
-    keypad.scanKeys();
+    if (!keypad.pressedKeyBuffer.empty())
+    {
+      char keyChar = keypad.pressedKeyBuffer.front();
+      keypad.pressedKeyBuffer.pop();
+
+      ESP_LOGI(TAG, "Pressed key: %c", keyChar);
+    };
     vTaskDelay(1);
   }
 }
