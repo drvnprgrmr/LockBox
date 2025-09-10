@@ -1,6 +1,0 @@
-version: "1.0.0"
-license: "MIT"
-description: "This is a component meant to be a re-implementation of the popular Keypad library for Arduino"
-dependencies:
-  idf: ">=5.5"
-  
