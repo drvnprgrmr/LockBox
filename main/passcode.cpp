@@ -12,29 +12,6 @@ nvs_handle_t my_handle;
 
 char const *const secretPasscodeKey = "secretPasscode";
 
-// to be called before other functions
-void initPasscode()
-{
-  // Initialize NVS
-  esp_err_t err = nvs_flash_init();
-  if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
-  {
-    // NVS partition was truncated and needs to be erased
-    // Retry nvs_flash_init
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    err = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(err);
-
-  // Open NVS handle
-  ESP_LOGI(TAG, "Opening Non-Volatile Storage (NVS) handle...");
-  err = nvs_open("storage", NVS_READWRITE, &my_handle);
-  if (err != ESP_OK)
-  {
-    ESP_LOGE(TAG, "Error (%s) opening NVS handle!", esp_err_to_name(err));
-  }
-}
-
 // reset the passcode stored in nvs
 esp_err_t setSecretPasscode(char newSecretPasscode[MAX_PASSCODE_LENGTH])
 {
@@ -89,27 +66,6 @@ void displayPasscode()
   esp_rom_printf("\n");
 }
 
-void appendPasscode(char chr)
-{
-  // check if character is a digit
-  if (!(chr >= '0' && chr <= '9'))
-  {
-    return;
-  }
-
-  // check if input passcode is not complete
-  if (inputPasscodeLength == MAX_PASSCODE_LENGTH)
-  {
-    return;
-  }
-
-  // add character to passcode and increase it's length
-  inputPasscode[inputPasscodeLength++] = chr;
-
-  // print passcode
-  displayPasscode();
-}
-
 void popPasscode()
 {
   // check that the inputPasscode isn't empty
@@ -162,4 +118,66 @@ esp_err_t validatePasscode()
   }
 
   return ESP_OK;
+}
+
+Passcode::Passcode()
+{
+  // initialize the nvs handle
+  esp_err_t err = nvs_flash_init();
+  if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+  {
+    // NVS partition was truncated and needs to be erased
+    // Retry nvs_flash_init
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    err = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(err);
+
+  // Open NVS handle
+  ESP_LOGI(TAG, "Opening Non-Volatile Storage (NVS) handle...");
+  err = nvs_open(TAG, NVS_READWRITE, &m_nvsHandle);
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Error (%s) opening NVS handle!", esp_err_to_name(err));
+  }
+}
+
+void Passcode::append(char inputChar)
+{
+  // check if character is a digit
+  if (!(inputChar >= '0' && inputChar <= '9'))
+  {
+    ESP_LOGI(TAG, "Invalid char, '%c'.", inputChar);
+    return;
+  }
+
+  // check if input passcode is full
+  if (m_inputPos == MAX_PASSCODE_LENGTH)
+  {
+    ESP_LOGI(TAG, "Input full.");
+    return;
+  }
+
+  // add character to passcode and increase it's length
+  m_input[m_inputPos++] = inputChar;
+
+  // print passcode
+  print();
+}
+
+void Passcode::pop()
+{
+  // check that the input isn't empty
+  if (m_inputPos)
+  {
+    // go back one character
+    --m_inputPos;
+
+    // set this position's value to a null char
+    m_input[m_inputPos] = '\0';
+
+    // print passcode
+    print();
+  }
+
 }

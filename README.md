@@ -9,5 +9,5 @@ LockBox is a custom safe implementation that uses a keypad as input and verifies
 - reset passcode to the default passcode
 
 ## TODO
-- [] add cool-down period for wrong input
-- [] add audit trail for input attempts
+- add audit trail for input attempts
+- add custom errors
