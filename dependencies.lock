@@ -1,10 +1,21 @@
 dependencies:
+  drvnprgrmr/esp-idf-keypad:
+    component_hash: 0d06a6e7390ae3e67d711df8d4600275e702b63053377674922a79dbc397fee4
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.5'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.0.0
   idf:
     source:
       type: idf
     version: 5.5.0
 direct_dependencies:
+- drvnprgrmr/esp-idf-keypad
 - idf
-manifest_hash: 72ed33696868c38b742b4ac329330fd164632f522db46a14b2195f8881894be8
+manifest_hash: c56096e4cbaae8bd62656ac8306a175821c8c994d7d8505b3834907f7884bedb
 target: esp32
 version: 2.0.0

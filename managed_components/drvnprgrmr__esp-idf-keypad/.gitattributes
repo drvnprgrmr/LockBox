@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+*.md linguist-language=Markdown
+*.yml linguist-language=YAML
+*.yaml linguist-language=YAML
+*.cpp linguist-language=C++
+*.hpp linguist-language=C++
+*.h linguist-language=C
+*.c linguist-language=C

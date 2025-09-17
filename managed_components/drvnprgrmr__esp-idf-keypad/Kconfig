@@ -1,0 +1,22 @@
+menu "Keypad Configuration"
+  config KEYPAD_ENABLE_LOGGING
+    bool "Enable logging"
+    default y
+
+  config KEYPAD_LOG_LEVEL
+    int "Default log level"
+    range 0 5
+    default 3
+    help
+        Set the default log level for the keypad component:
+        0=NONE, 1=ERROR, 2=WARN, 3=INFO, 4=DEBUG, 5=VERBOSE
+
+
+  config KEYPAD_MAX_BUFFER_SIZE
+    int "Max number of keys in buffer"
+    range 4 32
+    default 10
+    help
+      Maximum number of pressed/held keys stored in buffer.
+      8-16 is usually enough for human input.
+endmenu

@@ -1,0 +1,10 @@
+dependencies:
+  idf: '>=5.5'
+description: This is an ESP-IDF component meant to be a re-implementation of the popular
+  Keypad library for Arduino
+issues: https://github.com/drvnprgrmr/esp-idf-keypad/issues
+license: MIT
+tags:
+- keypad
+url: https://github.com/drvnprgrmr/esp-idf-keypad
+version: 1.0.0
