@@ -11,9 +11,7 @@
 
 static char const *const TAG = "APP_MAIN";
 
-const char popChar = '*';
-const char validateChar = '#';
-
+// create new keypad to handle key presses
 Keypad<4, 4> keypad{
     {{{'1', '2', '3', 'A'},
       {'4', '5', '6', 'B'},
@@ -24,17 +22,29 @@ Keypad<4, 4> keypad{
 
 extern "C" void app_main(void)
 {
-  // debug
-  esp_log_level_set("*", ESP_LOG_DEBUG);
+  // increase debounce time
+  keypad.setDebounceTime(100 * 1000);
 
+  // begin scanning keys
   keypad.beginScanTask();
 
+  // initialize the passcode
+  initPasscode();
+
+  char secretPasscode[MAX_PASSCODE_LENGTH] = "1234";
+  setSecretPasscode(secretPasscode);
+
+  vTaskDelay(10);
+
+  // debug
+  esp_log_level_set("*", ESP_LOG_DEBUG);
   char keyChar{};
   while (true)
   {
     if (keypad.getPressed(keyChar, portMAX_DELAY))
     {
-      ESP_LOGI(TAG, "Pressed key: %c", keyChar);
+      ESP_LOGD(TAG, "Pressed key: %c", keyChar);
+      handleInput(keyChar);
     };
     vTaskDelay(1);
   }

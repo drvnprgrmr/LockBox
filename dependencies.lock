@@ -1,6 +1,6 @@
 dependencies:
   drvnprgrmr/esp-idf-keypad:
-    component_hash: 0d06a6e7390ae3e67d711df8d4600275e702b63053377674922a79dbc397fee4
+    component_hash: ba027fe5b5bc16696f1932cd30b8da61cc08a1ba6ff9822a712661abd2d8502c
     dependencies:
     - name: idf
       require: private
@@ -8,7 +8,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.0.0
+    version: 1.0.1
   idf:
     source:
       type: idf

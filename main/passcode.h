@@ -2,13 +2,25 @@
 
 #include <freertos/FreeRTOS.h>
 #include <esp_timer.h>
-#include "common.h"
+#include <esp_log.h>
+#include <esp_random.h>
+#include <bootloader_random.h>
 
-#define PASSCODE_LENGTH 4
+#include "mbedtls/sha256.h"
+#include "mbedtls/pkcs5.h"
 
-extern const char secretPasscode[PASSCODE_LENGTH];
+#include <nvs.h>
+#include <nvs_flash.h>
 
-extern char inputPasscode[PASSCODE_LENGTH];
+#define MAX_PASSCODE_LENGTH 5
+
+extern char inputPasscode[MAX_PASSCODE_LENGTH];
+
+void initPasscode();
+
+void handleInput(char chr);
+
+esp_err_t setSecretPasscode(char *newSecretPasscode);
 
 void displayPasscode();
 
@@ -16,4 +28,4 @@ void appendPasscode(char chr);
 
 void popPasscode();
 
-bool validatePasscode();
+esp_err_t validatePasscode();

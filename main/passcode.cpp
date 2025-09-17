@@ -1,13 +1,88 @@
 #include "passcode.h"
 
-const char secretPasscode[PASSCODE_LENGTH] = {'1', '2', '3', '4'};
-char inputPasscode[PASSCODE_LENGTH];
-byte inputPasscodeLength = 0;
+static char const *const TAG = "passcode";
+
+static char const popChar = '*';
+static char const validateChar = '#';
+
+char inputPasscode[MAX_PASSCODE_LENGTH]{'\0'};
+int inputPasscodeLength = 0;
+
+nvs_handle_t my_handle;
+
+char const *const secretPasscodeKey = "secretPasscode";
+
+// to be called before other functions
+void initPasscode()
+{
+  // Initialize NVS
+  esp_err_t err = nvs_flash_init();
+  if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+  {
+    // NVS partition was truncated and needs to be erased
+    // Retry nvs_flash_init
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    err = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(err);
+
+  // Open NVS handle
+  ESP_LOGI(TAG, "Opening Non-Volatile Storage (NVS) handle...");
+  err = nvs_open("storage", NVS_READWRITE, &my_handle);
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Error (%s) opening NVS handle!", esp_err_to_name(err));
+  }
+}
+
+// reset the passcode stored in nvs
+esp_err_t setSecretPasscode(char newSecretPasscode[MAX_PASSCODE_LENGTH])
+{
+  esp_err_t err;
+
+  // store passcode
+  ESP_LOGI(TAG, "Writing string to NVS...");
+
+  // write secret passcode hash to nvs
+  err = nvs_set_str(my_handle, secretPasscodeKey, newSecretPasscode);
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Failed to write secret passcode's hash!");
+    return ESP_FAIL;
+  }
+
+  return ESP_OK;
+}
+
+void handleInput(char chr)
+{
+  esp_err_t err;
+  if (chr == popChar)
+  {
+    popPasscode();
+  }
+  else if (chr == validateChar)
+  {
+    err = validatePasscode();
+    if (err == ESP_FAIL)
+    {
+      ESP_LOGI(TAG, "Passcode wrong.");
+    }
+    else if (err == ESP_OK)
+    {
+      ESP_LOGI(TAG, "Passcode correct.");
+    }
+  }
+  else
+  {
+    appendPasscode(chr);
+  }
+}
 
 void displayPasscode()
 {
   esp_rom_printf("input(%d): ", inputPasscodeLength);
-  for (byte i = 0; i < inputPasscodeLength; i++)
+  for (size_t i = 0; i < inputPasscodeLength; i++)
   {
     esp_rom_printf("%c", inputPasscode[i]);
   }
@@ -23,7 +98,7 @@ void appendPasscode(char chr)
   }
 
   // check if input passcode is not complete
-  if (inputPasscodeLength == PASSCODE_LENGTH)
+  if (inputPasscodeLength == MAX_PASSCODE_LENGTH)
   {
     return;
   }
@@ -39,47 +114,52 @@ void popPasscode()
 {
   // check that the inputPasscode isn't empty
   if (inputPasscodeLength)
+  {
     // go back one character
     --inputPasscodeLength;
+
+    // set this position's value to a null char
+    inputPasscode[inputPasscodeLength] = '\0';
+  }
 
   // print passcode
   displayPasscode();
 }
 
-void onValidPasscode()
+esp_err_t validatePasscode()
 {
-  // reset input passcode
-  inputPasscodeLength = 0;
+  esp_err_t err;
 
-  esp_rom_printf("Valid passcode!\n");
-}
-void onInvalidPasscode()
-{
-  // reset input passcode
-  inputPasscodeLength = 0;
+  char secretPasscode[MAX_PASSCODE_LENGTH];
 
-  esp_rom_printf("Invalid passcode!\n");
-}
+  size_t secretPasscodeLength = 0;
 
-bool validatePasscode()
-{
-  // ensure the passcode is complete
-  if (inputPasscodeLength < PASSCODE_LENGTH)
+  // get length stored
+  err = nvs_get_str(my_handle, secretPasscodeKey, NULL, &secretPasscodeLength);
+  if (err != ESP_OK)
   {
-    onInvalidPasscode();
-
-    return false;
+    ESP_LOGE(TAG, "Error getting length of secret passcode: %s", esp_err_to_name(err));
+    return ESP_FAIL;
   }
 
-  for (byte i = 0; i < PASSCODE_LENGTH; i++)
+  // get secret passcode
+  ESP_LOGI(TAG, "Reading string from NVS...");
+  err = nvs_get_str(my_handle, secretPasscodeKey, secretPasscode, &secretPasscodeLength);
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Error reading secret passcode: %s", esp_err_to_name(err));
+    return ESP_FAIL;
+  }
+
+  ESP_LOGD(TAG, "secret, input: %s (%d), %s", secretPasscode, secretPasscodeLength, inputPasscode);
+
+  for (int i = 0; i < secretPasscodeLength; i++)
   {
     if (inputPasscode[i] != secretPasscode[i])
     {
-      onInvalidPasscode();
-      return false;
+      return ESP_FAIL;
     }
   }
 
-  onValidPasscode();
-  return true;
+  return ESP_OK;
 }
