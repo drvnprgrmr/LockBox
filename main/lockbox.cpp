@@ -20,21 +20,15 @@ Keypad<4, 4> keypad{
     {GPIO_NUM_13, GPIO_NUM_12, GPIO_NUM_14, GPIO_NUM_27},
     {GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33, GPIO_NUM_32}};
 
+Passcode passcode;
+
 extern "C" void app_main(void)
 {
   // increase debounce time
-  keypad.setDebounceTime(100 * 1000);
+  keypad.setDebounceTime(30 * 1000);
 
   // begin scanning keys
   keypad.beginScanTask();
-
-  // initialize the passcode
-  initPasscode();
-
-  char secretPasscode[MAX_PASSCODE_LENGTH] = "1234";
-  setSecretPasscode(secretPasscode);
-
-  vTaskDelay(10);
 
   // debug
   esp_log_level_set("*", ESP_LOG_DEBUG);
@@ -44,7 +38,7 @@ extern "C" void app_main(void)
     if (keypad.getPressed(keyChar, portMAX_DELAY))
     {
       ESP_LOGD(TAG, "Pressed key: %c", keyChar);
-      handleInput(keyChar);
+      passcode.handleInput(keyChar);
     };
     vTaskDelay(1);
   }
