@@ -11,13 +11,23 @@
 #define MIN_PASSCODE_LENGTH 4
 #define MAX_PASSCODE_LENGTH 8
 
+enum class PasscodeError
+{
+  OK,            // Input added/removed successfully
+  FAIL,          // Failed to validate passcode due to internal error. Should be reported.
+  VALID,         // Passcode entered is valid
+  INVALID,       // Passcode entered is invalid
+  COOLDOWN,      // Too many wrong attempts, try again after cooldown
+  REQUIRE_RESET, // Maximum number of failed attempts, needs to be reset by admin
+};
+
 class Passcode
 {
 public:
   Passcode();
   ~Passcode();
 
-  void handleInput(char inputChar);
+  PasscodeError handleInput(char inputChar);
 
   esp_err_t setSecret(char const *newSecret);
 
@@ -32,7 +42,10 @@ private:
   char const *m_secretKey{"secretPasscode"};
 
   /* cooloff period after max incorrect attempts */
-  uint64_t m_cooloff{60 * 1000 * 1000}; // 1 minute
+  uint64_t m_cooldown{60 * 1000 * 1000}; // 1 minute
+  uint64_t m_cooldownTimer{0};
+
+  bool m_isLocked{false};
 
   uint8_t m_curIncorrectAttempts{0};
   uint8_t m_maxIncorrectAttempts{3};
@@ -47,5 +60,7 @@ private:
   void append(char inputChar);
   void pop();
   void clear();
-  esp_err_t validate();
+  PasscodeError validate();
+  void onValid();
+  void onInvalid();
 };

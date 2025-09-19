@@ -87,7 +87,7 @@ void Passcode::clear()
   }
 }
 
-esp_err_t Passcode::validate()
+PasscodeError Passcode::validate()
 {
   esp_err_t err;
 
@@ -95,12 +95,13 @@ esp_err_t Passcode::validate()
 
   size_t secretLength = 0;
 
+  // ? Is this necessary?
   // get length stored
   err = nvs_get_str(m_nvsHandle, m_secretKey, NULL, &secretLength);
   if (err != ESP_OK)
   {
     ESP_LOGE(TAG, "Error getting length of secret passcode: %s", esp_err_to_name(err));
-    return ESP_FAIL;
+    return PasscodeError::FAIL;
   }
 
   // get secret passcode
@@ -109,54 +110,128 @@ esp_err_t Passcode::validate()
   if (err != ESP_OK)
   {
     ESP_LOGE(TAG, "Error reading secret passcode: %s", esp_err_to_name(err));
-    return ESP_FAIL;
+    return PasscodeError::FAIL;
   }
 
   ESP_LOGD(TAG, "secret, input: %s (%d), %s", secret, secretLength, m_input);
 
-  // clear input
-  for (size_t i = 0; i < m_inputPos; i++)
-  {
-  }
+  // validate input
   for (int i = 0; i < secretLength; i++)
   {
     if (m_input[i] != secret[i])
     {
       // clear current input
       clear();
-      return ESP_FAIL;
+
+      return PasscodeError::INVALID;
     }
   }
 
   // clear current input
   clear();
-  return ESP_OK;
+  return PasscodeError::VALID;
 }
 
-void Passcode::handleInput(char inputChar)
+PasscodeError Passcode::handleInput(char inputChar)
 {
-  esp_err_t err;
+  PasscodeError err;
 
+  // pop from the passcode
   if (inputChar == m_popChar)
   {
     pop();
+    return PasscodeError::OK;
   }
+
+  // validate the passcode
   else if (inputChar == m_validateChar)
   {
-    err = validate();
-    if (err == ESP_FAIL)
+
+    // check if the passcode is locked from further tries
+    if (m_isLocked)
     {
-      ESP_LOGI(TAG, "Passcode wrong.");
+      ESP_LOGI(TAG, "Passcode has to be reset before any more tries.");
+      clear();
+      return PasscodeError::REQUIRE_RESET;
     }
-    else if (err == ESP_OK)
+
+    // check if the cooldown was started
+    if (m_cooldownTimer > 0)
     {
-      ESP_LOGI(TAG, "Passcode correct.");
+      // cooldown isn't over yet
+      if (esp_timer_get_time() - m_cooldownTimer < m_cooldown)
+      {
+        ESP_LOGI(TAG, "Try again after %llu seconds.",
+                 (m_cooldown + m_cooldownTimer - esp_timer_get_time()) / (1 * 1000 * 1000));
+        clear();
+        return PasscodeError::COOLDOWN;
+      }
+
+      // cooldown is over. allow one last try
+      else
+      {
+        err = validate();
+        if (err == PasscodeError::INVALID)
+        {
+          m_isLocked = true;
+          ESP_LOGI(TAG, "All tries have been exhausted. The passcode is now locked from further input.");
+          return err;
+        }
+        else if (err == PasscodeError::VALID)
+        {
+          onValid();
+          return err;
+        }
+        return err;
+      }
+    }
+
+    err = validate();
+    if (err == PasscodeError::INVALID)
+    {
+      onInvalid();
+      return err;
+    }
+
+    else if (err == PasscodeError::VALID)
+    {
+      onValid();
+      return err;
     }
   }
+
+  // append to the passcode
   else
   {
     append(inputChar);
+    return PasscodeError::OK;
   }
+
+  //? never reaches here but the compiler complains with [-Werror=return-type]
+  return PasscodeError::OK;
+}
+
+void Passcode::onValid()
+{
+  ESP_LOGI(TAG, "Passcode valid.");
+
+  // reset the countdown
+  m_cooldownTimer = 0;
+
+  // reset the number of incorrect attempts
+  m_curIncorrectAttempts = 0;
+}
+
+void Passcode::onInvalid()
+{
+  // increment failed attempts count and check for max incorrect
+  if (++m_curIncorrectAttempts == m_maxIncorrectAttempts)
+  {
+    // start cooldown timer
+    m_cooldownTimer = esp_timer_get_time();
+  };
+
+  ESP_LOGI(TAG, "Passcode wrong. You have %d tries left.", m_maxIncorrectAttempts - m_curIncorrectAttempts);
 }
 
 esp_err_t Passcode::setSecret(char const *newSecret)
