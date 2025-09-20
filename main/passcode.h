@@ -43,16 +43,15 @@ private:
   char m_input[PASSCODE_LENGTH]{'\0'};
   size_t m_inputPos{0};
 
-  char const *m_secretKey{"secretPasscode"};
-
   /* cooloff period after max incorrect attempts */
   uint64_t m_cooldown{60 * 1000 * 1000}; // 1 minute
   uint64_t m_cooldownTimer{0};
 
-  bool m_isLocked{false};
+  // keeps track of the number of incorrect attempts so far
+  uint8_t m_incorrectAttempts{0};
 
-  uint8_t m_curIncorrectAttempts{0};
-  uint8_t m_maxIncorrectAttempts{3};
+  // defines whether the passcode can accept validations
+  bool m_isLocked{false};
 
   /* character that triggers a pop */
   char m_popChar{'*'};

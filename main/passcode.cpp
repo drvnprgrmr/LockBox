@@ -211,19 +211,19 @@ void Passcode::onValid()
   m_cooldownTimer = 0;
 
   // reset the number of incorrect attempts
-  m_curIncorrectAttempts = 0;
+  m_incorrectAttempts = 0;
 }
 
 void Passcode::onInvalid()
 {
   // increment failed attempts count and check for max incorrect
-  if (++m_curIncorrectAttempts == m_maxIncorrectAttempts)
+  if (++m_incorrectAttempts == PASSCODE_MAX_INCORRECT_ATTEMPTS)
   {
     // start cooldown timer
     m_cooldownTimer = esp_timer_get_time();
   };
 
-  ESP_LOGI(TAG, "Passcode wrong. You have %d tries left.", m_maxIncorrectAttempts - m_curIncorrectAttempts);
+  ESP_LOGI(TAG, "Passcode wrong. You have %d tries left.", PASSCODE_MAX_INCORRECT_ATTEMPTS - m_incorrectAttempts);
 }
 
 esp_err_t Passcode::setSecret(char const *newSecret)
