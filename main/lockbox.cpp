@@ -1,11 +1,13 @@
-#include <stdio.h>
+/* ----------------------------------- ESP ---------------------------------- */
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <driver/gpio.h>
 #include <esp_timer.h>
 
-// my includes
+/* --------------------------------- MANAGED -------------------------------- */
 #include "keypad.hpp"
+
+/* ---------------------------------- LOCAL --------------------------------- */
 #include "door.h"
 #include "passcode.h"
 
@@ -20,18 +22,20 @@ Keypad<4, 4> keypad{
     {GPIO_NUM_13, GPIO_NUM_12, GPIO_NUM_14, GPIO_NUM_27},
     {GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33, GPIO_NUM_32}};
 
+// Instantiate class instance for handling passcode
 Passcode passcode;
 
 extern "C" void app_main(void)
 {
+  // debug
+  esp_log_level_set("*", ESP_LOG_DEBUG);
+  
   // increase debounce time
   keypad.setDebounceTime(30 * 1000);
 
   // begin scanning keys
   keypad.beginScanTask();
 
-  // debug
-  esp_log_level_set("*", ESP_LOG_DEBUG);
   char keyChar{};
   while (true)
   {

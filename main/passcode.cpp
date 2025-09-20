@@ -30,7 +30,7 @@ Passcode::~Passcode()
 {
   // Close NVS Handle
   nvs_close(m_nvsHandle);
-  ESP_LOGI(TAG, "NVS handle closed.");
+  ESP_LOGV(TAG, "NVS handle closed.");
 }
 
 void Passcode::append(char inputChar)
@@ -43,7 +43,7 @@ void Passcode::append(char inputChar)
   }
 
   // check if input passcode is full
-  if (m_inputPos == MAX_PASSCODE_LENGTH)
+  if (m_inputPos == PASSCODE_LENGTH)
   {
     ESP_LOGI(TAG, "Input full.");
     return;
@@ -89,45 +89,35 @@ void Passcode::clear()
 
 PasscodeError Passcode::validate()
 {
-  esp_err_t err;
-
-  char secret[MAX_PASSCODE_LENGTH + 1]; // account for the null character
-
-  size_t secretLength = 0;
-
-  // ? Is this necessary?
-  // get length stored
-  err = nvs_get_str(m_nvsHandle, m_secretKey, NULL, &secretLength);
-  if (err != ESP_OK)
+  // first ensure the passcode is the right length
+  if (m_inputPos != PASSCODE_LENGTH)
   {
-    ESP_LOGE(TAG, "Error getting length of secret passcode: %s", esp_err_to_name(err));
-    return PasscodeError::FAIL;
+    ESP_LOGI(TAG, "Input not complete.");
+    return PasscodeError::INCOMPLETE;
   }
 
-  // get secret passcode
-  ESP_LOGI(TAG, "Reading string from NVS...");
-  err = nvs_get_str(m_nvsHandle, m_secretKey, secret, &secretLength);
-  if (err != ESP_OK)
-  {
-    ESP_LOGE(TAG, "Error reading secret passcode: %s", esp_err_to_name(err));
-    return PasscodeError::FAIL;
-  }
+  size_t secretLength = PASSCODE_LENGTH + 1; // account for the null character
+  char secret[secretLength];
 
-  ESP_LOGD(TAG, "secret, input: %s (%d), %s", secret, secretLength, m_input);
+  // get secret passcode while ensuring no errors
+  ESP_ERROR_CHECK(nvs_get_str(m_nvsHandle, PASSCODE_SECRET_KEY, secret, &secretLength));
+
+  // log the secret passcode for verification
+  ESP_LOGD(TAG, "secret = %s", secret);
 
   // validate input
-  for (int i = 0; i < secretLength; i++)
+  for (int i = 0; i < PASSCODE_LENGTH; i++)
   {
     if (m_input[i] != secret[i])
     {
-      // clear current input
+      // clear input
       clear();
 
       return PasscodeError::INVALID;
     }
   }
 
-  // clear current input
+  // clear input
   clear();
   return PasscodeError::VALID;
 }
@@ -161,8 +151,8 @@ PasscodeError Passcode::handleInput(char inputChar)
       // cooldown isn't over yet
       if (esp_timer_get_time() - m_cooldownTimer < m_cooldown)
       {
-        ESP_LOGI(TAG, "Try again after %llu seconds.",
-                 (m_cooldown + m_cooldownTimer - esp_timer_get_time()) / (1 * 1000 * 1000));
+        uint8_t secondsLeft = (m_cooldown + m_cooldownTimer - esp_timer_get_time()) / (1 * 1000 * 1000);
+        ESP_LOGI(TAG, "Try again after %u seconds.", secondsLeft);
         clear();
         return PasscodeError::COOLDOWN;
       }
@@ -198,6 +188,8 @@ PasscodeError Passcode::handleInput(char inputChar)
       onValid();
       return err;
     }
+
+    return err; // when incomplete
   }
 
   // append to the passcode
@@ -241,9 +233,9 @@ esp_err_t Passcode::setSecret(char const *newSecret)
   size_t secretLen = strlen(newSecret);
 
   // ensure secret passcode is the right size
-  if (secretLen < MIN_PASSCODE_LENGTH && secretLen > MAX_PASSCODE_LENGTH)
+  if (secretLen != PASSCODE_LENGTH)
   {
-    ESP_LOGE(TAG, "Invalid size of secret passcode.");
+    ESP_LOGE(TAG, "Passcode must be %d digits.");
     return ESP_FAIL;
   }
 
@@ -258,13 +250,13 @@ esp_err_t Passcode::setSecret(char const *newSecret)
   }
 
   // store passcode
-  ESP_LOGI(TAG, "Writing string to NVS...");
+  ESP_LOGV(TAG, "Writing string to NVS...");
 
-  // write secret passcode hash to nvs
-  err = nvs_set_str(m_nvsHandle, m_secretKey, newSecret);
+  // write new secret passcode to nvs
+  err = nvs_set_str(m_nvsHandle, PASSCODE_SECRET_KEY, newSecret);
   if (err != ESP_OK)
   {
-    ESP_LOGE(TAG, "Failed to write secret passcode's hash!");
+    ESP_LOGE(TAG, "Failed to write passcode's!");
     return ESP_FAIL;
   }
 
@@ -272,7 +264,7 @@ esp_err_t Passcode::setSecret(char const *newSecret)
   // After setting any values, nvs_commit() must be called to ensure changes are written
   // to flash storage. Implementations may write to storage at other times,
   // but this is not guaranteed.
-  ESP_LOGI(TAG, "\nCommitting updates in NVS...");
+  ESP_LOGV(TAG, "Committing updates in NVS...");
   err = nvs_commit(m_nvsHandle);
   if (err != ESP_OK)
   {
