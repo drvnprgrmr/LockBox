@@ -29,7 +29,7 @@ extern "C" void app_main(void)
 {
   // debug
   esp_log_level_set("*", ESP_LOG_DEBUG);
-  
+
   // increase debounce time
   keypad.setDebounceTime(30 * 1000);
 
@@ -44,6 +44,6 @@ extern "C" void app_main(void)
       ESP_LOGD(TAG, "Pressed key: %c", keyChar);
       passcode.handleInput(keyChar);
     };
-    vTaskDelay(1);
+    vTaskDelay(1);  
   }
 }
