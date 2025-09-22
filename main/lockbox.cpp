@@ -23,7 +23,7 @@ Keypad<4, 4> keypad{
     {GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33, GPIO_NUM_32}};
 
 // Instantiate class instance for handling passcode
-Passcode passcode;
+Passcode passcode{{GPIO_NUM_5, GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_21}, GPIO_NUM_23, GPIO_NUM_4};
 
 extern "C" void app_main(void)
 {
@@ -44,6 +44,6 @@ extern "C" void app_main(void)
       ESP_LOGD(TAG, "Pressed key: %c", keyChar);
       passcode.handleInput(keyChar);
     };
-    vTaskDelay(1);  
+    vTaskDelay(1);
   }
 }

@@ -6,6 +6,28 @@ static char const *const TAG = "passcode";
 
 Passcode::Passcode()
 {
+  initNvs();
+}
+
+Passcode::Passcode(std::array<gpio_num_t, PASSCODE_LENGTH> inputIndicatorPins, gpio_num_t lockIndicatorPin, gpio_num_t buzzerPin)
+    : m_inputIndicatorPins{inputIndicatorPins},
+      m_lockIndicatorPin{lockIndicatorPin},
+      m_buzzerPin{buzzerPin},
+      m_pinsEnabled{true}
+{
+  initNvs();
+  initPins();
+}
+
+Passcode::~Passcode()
+{
+  // Close NVS Handle
+  nvs_close(m_nvsHandle);
+  ESP_LOGV(TAG, "NVS handle closed.");
+}
+
+void Passcode::initNvs()
+{
   // initialize the nvs handle
   esp_err_t err = nvs_flash_init();
   if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -26,11 +48,38 @@ Passcode::Passcode()
   }
 }
 
-Passcode::~Passcode()
+void Passcode::initPins()
 {
-  // Close NVS Handle
-  nvs_close(m_nvsHandle);
-  ESP_LOGV(TAG, "NVS handle closed.");
+  // init led pins
+  for (gpio_num_t ledInputPin : m_inputIndicatorPins)
+  {
+    gpio_set_direction(ledInputPin, GPIO_MODE_OUTPUT);
+    gpio_set_level(ledInputPin, 0);
+  }
+
+  // init lock pin
+  gpio_set_direction(m_lockIndicatorPin, GPIO_MODE_OUTPUT);
+  gpio_set_level(m_lockIndicatorPin, 0);
+
+  // init buzzer pin
+  ledc_timer_config_t ledcTimerConfig = {
+      .speed_mode = LEDC_HIGH_SPEED_MODE,
+      .duty_resolution = LEDC_TIMER_10_BIT,
+      .timer_num = LEDC_TIMER_0,
+      .freq_hz = 2000, // 2kHz
+      .clk_cfg = LEDC_AUTO_CLK,
+  };
+  ledc_timer_config(&ledcTimerConfig);
+
+  ledc_channel_config_t ledcChannelConfig = {
+      .gpio_num = m_buzzerPin,
+      .speed_mode = LEDC_HIGH_SPEED_MODE,
+      .channel = LEDC_CHANNEL_0,
+      .intr_type = LEDC_INTR_DISABLE,
+      .timer_sel = LEDC_TIMER_0,
+      .duty = 0,
+  };
+  ledc_channel_config(&ledcChannelConfig);
 }
 
 void Passcode::append(char inputChar)
@@ -47,6 +96,13 @@ void Passcode::append(char inputChar)
   {
     ESP_LOGI(TAG, "Input full.");
     return;
+  }
+
+  if (m_pinsEnabled)
+  {
+    // turn on led at this position
+    gpio_num_t ledPin = m_inputIndicatorPins[m_inputPos];
+    gpio_set_level(ledPin, 1);
   }
 
   // add character to passcode and increase it's length
@@ -67,6 +123,13 @@ void Passcode::pop()
     // set this position's value to a null char
     m_input[m_inputPos] = '\0';
 
+    if (m_pinsEnabled)
+    {
+      // turn off the led at this position
+      gpio_num_t ledPin = m_inputIndicatorPins[m_inputPos];
+      gpio_set_level(ledPin, 0);
+    }
+
     // print passcode
     print();
   }
@@ -83,6 +146,13 @@ void Passcode::clear()
 
       // set this position's value to a null char
       m_input[m_inputPos] = '\0';
+
+      if (m_pinsEnabled)
+      {
+        // turn off the led at this position
+        gpio_num_t ledPin = m_inputIndicatorPins[m_inputPos];
+        gpio_set_level(ledPin, 0);
+      }
     }
   }
 }

@@ -2,10 +2,13 @@
 
 /* -------------------------------- INCLUDES -------------------------------- */
 #include <freertos/FreeRTOS.h>
+#include <driver/gpio.h>
+#include <driver/ledc.h>
 #include <esp_timer.h>
 #include <esp_log.h>
 #include <nvs.h>
 #include <nvs_flash.h>
+#include <array>
 
 /* --------------------------------- DEFINES -------------------------------- */
 #define PASSCODE_LENGTH 4
@@ -29,6 +32,7 @@ class Passcode
 {
 public:
   Passcode();
+  Passcode(std::array<gpio_num_t, PASSCODE_LENGTH> inputIndicatorPins, gpio_num_t lockIndicatorPin, gpio_num_t buzzerPin);
   ~Passcode();
 
   PasscodeError handleInput(char inputChar);
@@ -39,6 +43,11 @@ public:
 
 private:
   nvs_handle_t m_nvsHandle;
+
+  std::array<gpio_num_t, PASSCODE_LENGTH> m_inputIndicatorPins;
+  gpio_num_t m_lockIndicatorPin;
+  gpio_num_t m_buzzerPin;
+  bool m_pinsEnabled{false};
 
   char m_input[PASSCODE_LENGTH]{'\0'};
   size_t m_inputPos{0};
@@ -60,6 +69,12 @@ private:
   char m_validateChar{'#'};
 
 private:
+  /* --------------------------- constructor helpers -------------------------- */
+  void initNvs();
+  void initPins();
+
+private:
+  /* ----------------------------- business logic ----------------------------- */
   void append(char inputChar);
   void pop();
   void clear();
