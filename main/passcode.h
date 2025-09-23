@@ -15,6 +15,14 @@
 #define PASSCODE_SECRET_KEY "secretPasscode"
 #define PASSCODE_MAX_INCORRECT_ATTEMPTS 3
 
+#define SPEED_MODE LEDC_HIGH_SPEED_MODE
+#define DUTY_RESOLUTION LEDC_TIMER_10_BIT
+#define TIMER LEDC_TIMER_0
+#define CLK_CFG LEDC_AUTO_CLK
+#define INTR_TYPE LEDC_INTR_DISABLE
+#define CHANNEL LEDC_CHANNEL_0
+#define FREQUENCY 4000 // 4 kHz
+
 /* -------------------------------------------------------------------------- */
 enum class PasscodeError
 {
@@ -81,4 +89,7 @@ private:
   PasscodeError validate();
   void onValid();
   void onInvalid();
+  void inputBeep();
+  void validBeep();
+  void invalidBeep();
 };

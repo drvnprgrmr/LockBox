@@ -24,6 +24,11 @@ Passcode::~Passcode()
   // Close NVS Handle
   nvs_close(m_nvsHandle);
   ESP_LOGV(TAG, "NVS handle closed.");
+
+  if (m_pinsEnabled)
+  {
+    ledc_stop(SPEED_MODE, CHANNEL, 0);
+  }
 }
 
 void Passcode::initNvs()
@@ -63,20 +68,20 @@ void Passcode::initPins()
 
   // init buzzer pin
   ledc_timer_config_t ledcTimerConfig = {
-      .speed_mode = LEDC_HIGH_SPEED_MODE,
-      .duty_resolution = LEDC_TIMER_10_BIT,
-      .timer_num = LEDC_TIMER_0,
-      .freq_hz = 2000, // 2kHz
-      .clk_cfg = LEDC_AUTO_CLK,
+      .speed_mode = SPEED_MODE,
+      .duty_resolution = DUTY_RESOLUTION,
+      .timer_num = TIMER,
+      .freq_hz = FREQUENCY, // 2kHz
+      .clk_cfg = CLK_CFG,
   };
   ledc_timer_config(&ledcTimerConfig);
 
   ledc_channel_config_t ledcChannelConfig = {
       .gpio_num = m_buzzerPin,
-      .speed_mode = LEDC_HIGH_SPEED_MODE,
-      .channel = LEDC_CHANNEL_0,
-      .intr_type = LEDC_INTR_DISABLE,
-      .timer_sel = LEDC_TIMER_0,
+      .speed_mode = SPEED_MODE,
+      .channel = CHANNEL,
+      .intr_type = INTR_TYPE,
+      .timer_sel = TIMER,
       .duty = 0,
   };
   ledc_channel_config(&ledcChannelConfig);
@@ -103,6 +108,8 @@ void Passcode::append(char inputChar)
     // turn on led at this position
     gpio_num_t ledPin = m_inputIndicatorPins[m_inputPos];
     gpio_set_level(ledPin, 1);
+
+    inputBeep();
   }
 
   // add character to passcode and increase it's length
@@ -129,6 +136,8 @@ void Passcode::pop()
       gpio_num_t ledPin = m_inputIndicatorPins[m_inputPos];
       gpio_set_level(ledPin, 0);
     }
+
+    inputBeep();
 
     // print passcode
     print();
@@ -282,6 +291,10 @@ void Passcode::onValid()
 
   // reset the number of incorrect attempts
   m_incorrectAttempts = 0;
+
+  if (m_pinsEnabled) {
+    validBeep();
+  }
 }
 
 void Passcode::onInvalid()
@@ -292,6 +305,10 @@ void Passcode::onInvalid()
     // start cooldown timer
     m_cooldownTimer = esp_timer_get_time();
   };
+
+  if (m_pinsEnabled) {
+    invalidBeep();
+  }
 
   ESP_LOGI(TAG, "Passcode wrong. You have %d tries left.", PASSCODE_MAX_INCORRECT_ATTEMPTS - m_incorrectAttempts);
 }
@@ -348,4 +365,48 @@ esp_err_t Passcode::setSecret(char const *newSecret)
 void Passcode::print()
 {
   ESP_LOGD(TAG, "Input(%d): %s", m_inputPos, m_input);
+}
+
+void _beep(uint32_t freq, uint32_t duration)
+{
+  uint32_t duty = 1 << (DUTY_RESOLUTION / 2); // set to half the maximum
+
+  // start the buzzer
+  ledc_set_freq(SPEED_MODE, TIMER, freq);
+  ledc_set_duty_and_update(SPEED_MODE, CHANNEL, duty, 0);
+
+  vTaskDelay(duration / portTICK_PERIOD_MS);
+
+  // bring it back low
+  ledc_set_duty_and_update(SPEED_MODE, CHANNEL, 0, 0);
+}
+
+void Passcode::inputBeep()
+{
+  // 800Hz for 50ms
+  _beep(800, 50);
+}
+
+void Passcode::validBeep()
+{
+  // 2kHz for 100ms
+  _beep(2000, 100);
+
+  // delay for 50ms
+  vTaskDelay(50);
+
+  // 2.2kHz for 100ms
+  _beep(2200, 100);
+}
+
+void Passcode::invalidBeep()
+{
+  // 400Hz for 100ms
+  _beep(400, 100);
+
+  // delay for 50ms
+  vTaskDelay(50);
+
+  // 350Hz for 100ms
+  _beep(350, 100);
 }
