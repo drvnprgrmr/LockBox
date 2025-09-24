@@ -2,6 +2,8 @@
 
 static char const *const TAG = "passcode";
 
+// TODO: Save passcode lock state to nvs too
+
 /* -------------------------------------------------------------------------- */
 
 Passcode::Passcode()
@@ -27,7 +29,15 @@ Passcode::~Passcode()
 
   if (m_pinsEnabled)
   {
-    ledc_stop(SPEED_MODE, CHANNEL, 0);
+    ledc_stop(LOCK_SPEED_MODE, LOCK_CHANNEL, 0);
+
+    ledc_stop(BUZZER_SPEED_MODE, BUZZER_CHANNEL, 0);
+
+    if (m_blinkTaskHandle)
+    {
+      vTaskDelete(m_blinkTaskHandle);
+      m_blinkTaskHandle = nullptr;
+    }
   }
 }
 
@@ -55,6 +65,12 @@ void Passcode::initNvs()
 
 void Passcode::initPins()
 {
+  // install fade function
+  ledc_fade_func_install(0);
+
+  // register blink task
+  xTaskCreate(blinkTask, "BlinkAlarm", 1024, this, 0, &m_blinkTaskHandle);
+
   // init led pins
   for (gpio_num_t ledInputPin : m_inputIndicatorPins)
   {
@@ -63,28 +79,46 @@ void Passcode::initPins()
   }
 
   // init lock pin
-  gpio_set_direction(m_lockIndicatorPin, GPIO_MODE_OUTPUT);
-  gpio_set_level(m_lockIndicatorPin, 0);
+  ledc_timer_config_t lockTimerConfig = {
+      .speed_mode = LOCK_SPEED_MODE,
+      .duty_resolution = LOCK_DUTY_RESOLUTION,
+      .timer_num = LOCK_TIMER,
+      .freq_hz = LOCK_FREQUENCY, // 2kHz
+      .clk_cfg = LOCK_CLK_CFG,
+  };
+  ledc_timer_config(&lockTimerConfig);
+
+  ledc_channel_config_t lockChannelConfig = {
+      .gpio_num = m_lockIndicatorPin,
+      .speed_mode = LOCK_SPEED_MODE,
+      .channel = LOCK_CHANNEL,
+      .intr_type = LOCK_INTR_TYPE,
+      .timer_sel = LOCK_TIMER,
+      .duty = 0,
+      .hpoint = 0,
+  };
+  ledc_channel_config(&lockChannelConfig);
 
   // init buzzer pin
-  ledc_timer_config_t ledcTimerConfig = {
-      .speed_mode = SPEED_MODE,
-      .duty_resolution = DUTY_RESOLUTION,
-      .timer_num = TIMER,
-      .freq_hz = FREQUENCY, // 2kHz
-      .clk_cfg = CLK_CFG,
+  ledc_timer_config_t buzzerTimerConfig = {
+      .speed_mode = BUZZER_SPEED_MODE,
+      .duty_resolution = BUZZER_DUTY_RESOLUTION,
+      .timer_num = BUZZER_TIMER,
+      .freq_hz = BUZZER_FREQUENCY, // 2kHz
+      .clk_cfg = BUZZER_CLK_CFG,
   };
-  ledc_timer_config(&ledcTimerConfig);
+  ledc_timer_config(&buzzerTimerConfig);
 
-  ledc_channel_config_t ledcChannelConfig = {
+  ledc_channel_config_t buzzerChannelConfig = {
       .gpio_num = m_buzzerPin,
-      .speed_mode = SPEED_MODE,
-      .channel = CHANNEL,
-      .intr_type = INTR_TYPE,
-      .timer_sel = TIMER,
+      .speed_mode = BUZZER_SPEED_MODE,
+      .channel = BUZZER_CHANNEL,
+      .intr_type = BUZZER_INTR_TYPE,
+      .timer_sel = BUZZER_TIMER,
       .duty = 0,
+      .hpoint = 0,
   };
-  ledc_channel_config(&ledcChannelConfig);
+  ledc_channel_config(&buzzerChannelConfig);
 }
 
 void Passcode::append(char inputChar)
@@ -135,9 +169,9 @@ void Passcode::pop()
       // turn off the led at this position
       gpio_num_t ledPin = m_inputIndicatorPins[m_inputPos];
       gpio_set_level(ledPin, 0);
-    }
 
-    inputBeep();
+      inputBeep();
+    }
 
     // print passcode
     print();
@@ -203,6 +237,22 @@ PasscodeError Passcode::validate()
 
 PasscodeError Passcode::handleInput(char inputChar)
 {
+  // check if the passcode is locked from further tries
+  if (m_isLocked)
+  {
+    ESP_LOGI(TAG, "Passcode has to be reset before any more tries.");
+    return PasscodeError::REQUIRE_RESET;
+  }
+
+  // cooldown started but isn't over yet
+  else if (m_cooldownTimer > 0 && esp_timer_get_time() - m_cooldownTimer < m_cooldown)
+  {
+    uint8_t secondsLeft = (m_cooldown + m_cooldownTimer - esp_timer_get_time()) / (1 * 1000 * 1000);
+    ESP_LOGI(TAG, "Try again after %u seconds.", secondsLeft);
+    clear();
+    return PasscodeError::COOLDOWN;
+  }
+
   PasscodeError err;
 
   // pop from the passcode
@@ -216,43 +266,22 @@ PasscodeError Passcode::handleInput(char inputChar)
   else if (inputChar == m_validateChar)
   {
 
-    // check if the passcode is locked from further tries
-    if (m_isLocked)
-    {
-      ESP_LOGI(TAG, "Passcode has to be reset before any more tries.");
-      clear();
-      return PasscodeError::REQUIRE_RESET;
-    }
-
-    // check if the cooldown was started
+    // cooldown is over. allow one last try
     if (m_cooldownTimer > 0)
     {
-      // cooldown isn't over yet
-      if (esp_timer_get_time() - m_cooldownTimer < m_cooldown)
+      err = validate();
+      if (err == PasscodeError::INVALID)
       {
-        uint8_t secondsLeft = (m_cooldown + m_cooldownTimer - esp_timer_get_time()) / (1 * 1000 * 1000);
-        ESP_LOGI(TAG, "Try again after %u seconds.", secondsLeft);
-        clear();
-        return PasscodeError::COOLDOWN;
-      }
-
-      // cooldown is over. allow one last try
-      else
-      {
-        err = validate();
-        if (err == PasscodeError::INVALID)
-        {
-          m_isLocked = true;
-          ESP_LOGI(TAG, "All tries have been exhausted. The passcode is now locked from further input.");
-          return err;
-        }
-        else if (err == PasscodeError::VALID)
-        {
-          onValid();
-          return err;
-        }
+        m_isLocked = true;
+        ESP_LOGI(TAG, "All tries have been exhausted. The passcode is now locked from further input.");
         return err;
       }
+      else if (err == PasscodeError::VALID)
+      {
+        onValid();
+        return err;
+      }
+      return err;
     }
 
     err = validate();
@@ -292,7 +321,8 @@ void Passcode::onValid()
   // reset the number of incorrect attempts
   m_incorrectAttempts = 0;
 
-  if (m_pinsEnabled) {
+  if (m_pinsEnabled)
+  {
     validBeep();
   }
 }
@@ -304,9 +334,16 @@ void Passcode::onInvalid()
   {
     // start cooldown timer
     m_cooldownTimer = esp_timer_get_time();
+
+    // fade locked led
+    ledc_set_duty(LOCK_SPEED_MODE, LOCK_CHANNEL, 1000);
+    ledc_update_duty(LOCK_SPEED_MODE, LOCK_CHANNEL);
+
+    ledc_set_fade_time_and_start(LOCK_SPEED_MODE, LOCK_CHANNEL, 0, m_cooldown / 1000, LEDC_FADE_NO_WAIT);
   };
 
-  if (m_pinsEnabled) {
+  if (m_pinsEnabled)
+  {
     invalidBeep();
   }
 
@@ -369,44 +406,72 @@ void Passcode::print()
 
 void _beep(uint32_t freq, uint32_t duration)
 {
-  uint32_t duty = 1 << (DUTY_RESOLUTION / 2); // set to half the maximum
+  uint32_t duty = (1 << (BUZZER_DUTY_RESOLUTION - 1)); // set to the maximum duty cycle
 
   // start the buzzer
-  ledc_set_freq(SPEED_MODE, TIMER, freq);
-  ledc_set_duty_and_update(SPEED_MODE, CHANNEL, duty, 0);
+  ledc_set_freq(BUZZER_SPEED_MODE, BUZZER_TIMER, freq);
+  ledc_set_duty(BUZZER_SPEED_MODE, BUZZER_CHANNEL, duty);
+  ledc_update_duty(BUZZER_SPEED_MODE, BUZZER_CHANNEL);
 
   vTaskDelay(duration / portTICK_PERIOD_MS);
 
   // bring it back low
-  ledc_set_duty_and_update(SPEED_MODE, CHANNEL, 0, 0);
+  ledc_set_duty(BUZZER_SPEED_MODE, BUZZER_CHANNEL, 0);
+  ledc_update_duty(BUZZER_SPEED_MODE, BUZZER_CHANNEL);
 }
 
 void Passcode::inputBeep()
 {
-  // 800Hz for 50ms
-  _beep(800, 50);
+  // 800Hz for 100ms
+  _beep(800, 100);
 }
 
 void Passcode::validBeep()
 {
-  // 2kHz for 100ms
-  _beep(2000, 100);
-
-  // delay for 50ms
-  vTaskDelay(50);
-
-  // 2.2kHz for 100ms
-  _beep(2200, 100);
+  // 2kHz for 500ms
+  _beep(2000, 500);
 }
 
 void Passcode::invalidBeep()
 {
   // 400Hz for 100ms
-  _beep(400, 100);
-
-  // delay for 50ms
-  vTaskDelay(50);
+  _beep(440, 200);
 
   // 350Hz for 100ms
-  _beep(350, 100);
+  _beep(200, 300);
+}
+
+void Passcode::blink()
+{
+  uint32_t lockDuty = 1 << (LOCK_DUTY_RESOLUTION - 1);
+  uint32_t buzzerDuty = 1 << (BUZZER_DUTY_RESOLUTION - 1);
+
+  while (true)
+  {
+    if (m_isLocked)
+    {
+      // ring an alarm
+      ledc_set_freq(BUZZER_SPEED_MODE, BUZZER_TIMER, BUZZER_FREQUENCY);
+      ledc_set_duty_and_update(BUZZER_SPEED_MODE, BUZZER_CHANNEL, buzzerDuty, 0);
+
+      ledc_set_duty(LOCK_SPEED_MODE, LOCK_CHANNEL, lockDuty);
+      ledc_update_duty(LOCK_SPEED_MODE, LOCK_CHANNEL);
+
+      vTaskDelay(500 / portTICK_PERIOD_MS);
+
+      ledc_set_duty(LOCK_SPEED_MODE, LOCK_CHANNEL, 0);
+      ledc_update_duty(LOCK_SPEED_MODE, LOCK_CHANNEL);
+
+      vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+  }
+}
+
+void Passcode::blinkTask(void *pvParameters)
+{
+  auto *instance = static_cast<Passcode *>(pvParameters);
+  instance->blink();
+
+  // safeguard
+  vTaskDelete(nullptr);
 }

@@ -9,19 +9,28 @@
 #include <nvs.h>
 #include <nvs_flash.h>
 #include <array>
+#include <cmath>
 
 /* --------------------------------- DEFINES -------------------------------- */
 #define PASSCODE_LENGTH 4
 #define PASSCODE_SECRET_KEY "secretPasscode"
 #define PASSCODE_MAX_INCORRECT_ATTEMPTS 3
-
-#define SPEED_MODE LEDC_HIGH_SPEED_MODE
-#define DUTY_RESOLUTION LEDC_TIMER_10_BIT
-#define TIMER LEDC_TIMER_0
-#define CLK_CFG LEDC_AUTO_CLK
-#define INTR_TYPE LEDC_INTR_DISABLE
-#define CHANNEL LEDC_CHANNEL_0
-#define FREQUENCY 4000 // 4 kHz
+//
+#define BUZZER_SPEED_MODE LEDC_HIGH_SPEED_MODE
+#define BUZZER_DUTY_RESOLUTION LEDC_TIMER_10_BIT
+#define BUZZER_TIMER LEDC_TIMER_0
+#define BUZZER_CLK_CFG LEDC_AUTO_CLK
+#define BUZZER_INTR_TYPE LEDC_INTR_DISABLE
+#define BUZZER_CHANNEL LEDC_CHANNEL_0
+#define BUZZER_FREQUENCY 4000 // > 2kHz
+//
+#define LOCK_SPEED_MODE LEDC_LOW_SPEED_MODE
+#define LOCK_DUTY_RESOLUTION LEDC_TIMER_10_BIT
+#define LOCK_TIMER LEDC_TIMER_1
+#define LOCK_CLK_CFG LEDC_AUTO_CLK
+#define LOCK_INTR_TYPE LEDC_INTR_DISABLE
+#define LOCK_CHANNEL LEDC_CHANNEL_1
+#define LOCK_FREQUENCY 1000 // 1kHz
 
 /* -------------------------------------------------------------------------- */
 enum class PasscodeError
@@ -50,6 +59,7 @@ public:
   void print();
 
 private:
+  TaskHandle_t m_blinkTaskHandle{nullptr};
   nvs_handle_t m_nvsHandle;
 
   std::array<gpio_num_t, PASSCODE_LENGTH> m_inputIndicatorPins;
@@ -61,7 +71,7 @@ private:
   size_t m_inputPos{0};
 
   /* cooloff period after max incorrect attempts */
-  uint64_t m_cooldown{60 * 1000 * 1000}; // 1 minute
+  uint64_t m_cooldown{30 * 1000 * 1000}; // 30 seconds in μs
   uint64_t m_cooldownTimer{0};
 
   // keeps track of the number of incorrect attempts so far
@@ -92,4 +102,6 @@ private:
   void inputBeep();
   void validBeep();
   void invalidBeep();
+  void blink();
+  static void blinkTask(void *pvParameters);
 };

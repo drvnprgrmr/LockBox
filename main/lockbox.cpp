@@ -31,7 +31,7 @@ extern "C" void app_main(void)
   esp_log_level_set("*", ESP_LOG_DEBUG);
 
   // increase debounce time
-  keypad.setDebounceTime(30 * 1000);
+  keypad.setDebounceTime(50 * 1000);
 
   // begin scanning keys
   keypad.beginScanTask();
