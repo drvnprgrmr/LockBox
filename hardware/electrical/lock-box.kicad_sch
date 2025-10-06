@@ -2,9 +2,111 @@
 	(version 20250114)
 	(generator "eeschema")
 	(generator_version "9.0")
-	(uuid 42416d92-fe63-4085-b8a4-c2081c458f3d)
+	(uuid "42416d92-fe63-4085-b8a4-c2081c458f3d")
 	(paper "A4")
 	(lib_symbols)
+	(sheet
+		(at 225.425 76.2)
+		(size 22.86 43.18)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "df2bf5ba-63ab-4c56-befc-22dabc6d42c6")
+		(property "Sheetname" "indicators"
+			(at 225.425 75.4884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "indicators.kicad_sch"
+			(at 225.425 119.9646 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "3rd Digit" input
+			(at 225.425 86.995 180)
+			(uuid "b95a4bb4-495e-4952-95ce-e93c52958b28")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "2nd Digit" input
+			(at 225.425 83.185 180)
+			(uuid "afc34729-5984-44b2-8f1c-73ba4f5ec5d4")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "Error LED" input
+			(at 225.425 100.965 180)
+			(uuid "30c84f18-1193-4a00-9c1a-cda7e24a8177")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "1st Digit" input
+			(at 225.425 79.375 180)
+			(uuid "d46df73a-9d7f-432b-a32f-585218ba31ac")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "4th Digit" input
+			(at 225.425 90.805 180)
+			(uuid "a79f9089-9ff1-421c-abd1-df53dcc5ba63")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "Buzzer" input
+			(at 225.425 109.855 180)
+			(uuid "d372f2a8-c29c-462b-a398-ae9b67711d77")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(instances
+			(project "lock-box"
+				(path "/42416d92-fe63-4085-b8a4-c2081c458f3d"
+					(page "2")
+				)
+			)
+		)
+	)
 	(sheet_instances
 		(path "/"
 			(page "1")
