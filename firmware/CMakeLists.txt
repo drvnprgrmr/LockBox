@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
-set(COMPONENTS "main" "freertos" "driver" "esp_timer" "esp_log" "nvs" "nvs_flash")
+set(COMPONENTS 
+              "main" "components" 
+              "freertos" "driver" "esp_timer" "esp_log" "nvs" "nvs_flash")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(LockBox)
