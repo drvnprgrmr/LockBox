@@ -1,0 +1,44 @@
+# FreeCAD specific files
+*.FCStd1
+*.FCStd.bak
+*.FCbak
+
+# Backup files
+*~
+*.bak
+*.bak1
+*.swp
+
+# Thumbnail cache
+Thumbs.db
+._*
+.DS_Store
+
+# User configuration files (optional, but recommended for collaborative projects)
+user.cfg
+system.cfg
+
+# Macro directories (if you store your macros outside the project)
+macros/
+
+# Log files
+FreeCAD.log
+FreeCAD.log.1
+
+# Python compiled files
+*.pyc
+__pycache__/
+
+# Build artifacts (if you are compiling FreeCAD or custom modules)
+build/
+dist/
+*.o
+*.so
+*.dll
+*.exe
+
+# IDE and editor specific files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
