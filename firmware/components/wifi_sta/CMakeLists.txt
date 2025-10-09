@@ -8,4 +8,4 @@ endif(CONFIG_WIFI_STA_CONNECT)
 
 idf_component_register(SRCS "${srcs}"
                        INCLUDE_DIRS "${include}"
-                       PRIV_REQUIRES esp_wifi esp_netif esp_log)
+                       PRIV_REQUIRES esp_wifi esp_netif)
