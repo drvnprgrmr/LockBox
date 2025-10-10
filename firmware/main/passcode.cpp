@@ -9,6 +9,7 @@ static char const *const TAG = "passcode";
 Passcode::Passcode()
 {
   initNvs();
+  openNvsHandle();
 }
 
 Passcode::Passcode(std::array<gpio_num_t, PASSCODE_LENGTH> inputIndicatorPins, gpio_num_t lockIndicatorPin, gpio_num_t buzzerPin)
@@ -18,6 +19,7 @@ Passcode::Passcode(std::array<gpio_num_t, PASSCODE_LENGTH> inputIndicatorPins, g
       m_pinsEnabled{true}
 {
   initNvs();
+  openNvsHandle();
   initPins();
 }
 
@@ -41,22 +43,11 @@ Passcode::~Passcode()
   }
 }
 
-void Passcode::initNvs()
+void Passcode::openNvsHandle()
 {
-  // initialize the nvs handle
-  esp_err_t err = nvs_flash_init();
-  if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
-  {
-    // NVS partition was truncated and needs to be erased
-    // Retry nvs_flash_init
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    err = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(err);
-
   // Open NVS handle
   ESP_LOGV(TAG, "Opening Non-Volatile Storage (NVS) handle...");
-  err = nvs_open(TAG, NVS_READWRITE, &m_nvsHandle);
+  esp_err_t err = nvs_open(TAG, NVS_READWRITE, &m_nvsHandle);
   if (err != ESP_OK)
   {
     ESP_LOGE(TAG, "Error (%s) opening NVS handle!", esp_err_to_name(err));

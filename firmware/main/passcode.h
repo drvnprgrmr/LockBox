@@ -10,6 +10,11 @@
 #include <nvs_flash.h>
 #include <array>
 #include <cmath>
+//
+extern "C"
+{
+#include "lib.h"
+}
 
 /* --------------------------------- DEFINES -------------------------------- */
 #define PASSCODE_LENGTH 4
@@ -88,7 +93,7 @@ private:
 
 private:
   /* --------------------------- constructor helpers -------------------------- */
-  void initNvs();
+  void openNvsHandle();
   void initPins();
 
 private:
