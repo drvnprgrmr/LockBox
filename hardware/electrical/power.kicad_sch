@@ -2198,7 +2198,7 @@
 	)
 	(wire
 		(pts
-			(xy 266.7 135.89) (xy 275.59 135.89)
+			(xy 269.24 135.89) (xy 275.59 135.89)
 		)
 		(stroke
 			(width 0)
@@ -2528,7 +2528,7 @@
 	)
 	(wire
 		(pts
-			(xy 266.7 148.59) (xy 275.59 148.59)
+			(xy 269.24 148.59) (xy 275.59 148.59)
 		)
 		(stroke
 			(width 0)
@@ -2588,7 +2588,7 @@
 	)
 	(wire
 		(pts
-			(xy 256.54 148.59) (xy 259.08 148.59)
+			(xy 256.54 148.59) (xy 261.62 148.59)
 		)
 		(stroke
 			(width 0)
@@ -2658,7 +2658,7 @@
 	)
 	(wire
 		(pts
-			(xy 256.54 135.89) (xy 259.08 135.89)
+			(xy 256.54 135.89) (xy 261.62 135.89)
 		)
 		(stroke
 			(width 0)
@@ -4159,7 +4159,7 @@
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(uuid "3239331d-a9e2-440d-b452-fdb740971a8f")
 		(property "Reference" "D302"
 			(at 252.476 145.542 0)
@@ -4886,15 +4886,15 @@
 	)
 	(symbol
 		(lib_id "Device:R_US")
-		(at 262.89 135.89 90)
+		(at 265.43 135.89 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(uuid "a7f57faa-66d3-4e67-b6f1-348ccae52828")
 		(property "Reference" "R301"
-			(at 263.144 133.35 90)
+			(at 265.684 133.35 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4902,7 +4902,7 @@
 			)
 		)
 		(property "Value" "1k"
-			(at 263.398 137.922 90)
+			(at 265.938 137.922 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4910,7 +4910,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 263.144 134.874 90)
+			(at 265.684 134.874 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4919,7 +4919,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 262.89 135.89 0)
+			(at 265.43 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4928,7 +4928,7 @@
 			)
 		)
 		(property "Description" "Resistor, US symbol"
-			(at 262.89 135.89 0)
+			(at 265.43 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5559,15 +5559,15 @@
 	)
 	(symbol
 		(lib_id "Device:R_US")
-		(at 262.89 148.59 90)
+		(at 265.43 148.59 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(uuid "ec645b89-0820-402f-8264-815c2be18f9d")
 		(property "Reference" "R302"
-			(at 263.144 146.05 90)
+			(at 265.684 146.05 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5575,7 +5575,7 @@
 			)
 		)
 		(property "Value" "1k"
-			(at 263.398 150.622 90)
+			(at 265.938 150.622 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5583,7 +5583,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 263.144 147.574 90)
+			(at 265.684 147.574 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5592,7 +5592,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 262.89 148.59 0)
+			(at 265.43 148.59 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5601,7 +5601,7 @@
 			)
 		)
 		(property "Description" "Resistor, US symbol"
-			(at 262.89 148.59 0)
+			(at 265.43 148.59 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5768,7 +5768,7 @@
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(uuid "fc5199c9-46e4-4fcb-83a2-87d331b1bd82")
 		(property "Reference" "D301"
 			(at 252.476 132.842 0)
