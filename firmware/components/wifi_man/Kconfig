@@ -1,5 +1,6 @@
-menu "WiFi STA Configuration"
+mainmenu "WiFi Manager Configuration"
 
+menu "STA"
     config WIFI_STA_CONNECT
         bool "Connect using WiFi"
         default n
