@@ -10,6 +10,7 @@
 /* ---------------------------------- LOCAL --------------------------------- */
 #include "door.h"
 #include "passcode.h"
+#include "wifi_man.h"
 
 static char const *const TAG = "APP_MAIN";
 
@@ -29,6 +30,9 @@ extern "C" void app_main(void)
 {
   // debug
   esp_log_level_set("*", ESP_LOG_DEBUG);
+
+  // begin wifi in sta mode
+  Wifi wifi{WifiMode::STA};
 
   // increase debounce time
   keypad.setDebounceTime(50 * 1000);

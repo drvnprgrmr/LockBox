@@ -1,5 +1,10 @@
 #include "wifi_man.h"
 
+static char const *const TAG = "wifi";
+
+/* FreeRTOS event group to signal when we are connected*/
+static EventGroupHandle_t s_wifi_event_group;
+
 Wifi::Wifi(WifiMode mode)
 {
   /* -------------------------------- Init NVS -------------------------------- */
@@ -22,7 +27,7 @@ Wifi::Wifi(WifiMode mode)
   // Must be running prior to initializing the network driver!
   ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  // configure wifi 
+  // configure wifi
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
@@ -41,11 +46,45 @@ Wifi::Wifi(WifiMode mode)
     esp_netif_create_default_wifi_sta();
 
     wifi_config_t wifi_config = {
-      .sta = {
-        .ssid = "q",
-      }
-    };
+        .sta = {
+            .ssid = CONFIG_WIFI_STA_SSID,
+            .password = CONFIG_WIFI_STA_PASSWORD,
+            .threshold = {
+                .authmode = WIFI_STA_AUTH_MODE_THRESHOLD,
+            },
+            .sae_pwe_h2e = WIFI_SAE_MODE,
+            .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
 
+        }};
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_LOGI(TAG, "wifi_init_sta finished.");
+
+    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
+     * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+                                           WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                                           pdFALSE,
+                                           pdFALSE,
+                                           portMAX_DELAY);
+
+    /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
+     * happened. */
+    if (bits & WIFI_CONNECTED_BIT)
+    {
+      ESP_LOGI(TAG, "connected to ap SSID:%s", CONFIG_WIFI_STA_SSID);
+    }
+    else if (bits & WIFI_FAIL_BIT)
+    {
+      ESP_LOGI(TAG, "Failed to connect to SSID:%s", CONFIG_WIFI_STA_SSID);
+    }
+    else
+    {
+      ESP_LOGE(TAG, "UNEXPECTED EVENT!");
+    }
   }
   else if (mode == WifiMode::AP)
   {
@@ -71,10 +110,13 @@ void Wifi::eventHandler(esp_event_base_t event_base, int32_t event_id, void *eve
     switch (event_id)
     {
     case WIFI_EVENT_STA_START:
+    {
       esp_wifi_connect();
       break;
+    }
 
     case WIFI_EVENT_STA_DISCONNECTED:
+    {
       if (staRetryNum++ < staRetryMax)
       {
         esp_wifi_connect();
@@ -86,28 +128,33 @@ void Wifi::eventHandler(esp_event_base_t event_base, int32_t event_id, void *eve
       }
 
       break;
+    }
     case WIFI_EVENT_STA_CONNECTED:
-      // reset the number of retries
+    { // reset the number of retries
       staRetryNum = 0;
 
       xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
       break;
+    }
 
-      /* ----------------------------------- AP ----------------------------------- */
+    /* ----------------------------------- AP ----------------------------------- */
     case WIFI_EVENT_AP_STACONNECTED:
+    {
       wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *)event_data;
 
       // Log info about connected station
       ESP_LOGI(TAG, "Station connected. mac =" MACSTR ", AID = %d", MAC2STR(event->mac), event->aid);
       break;
-
+    }
     case WIFI_EVENT_AP_STADISCONNECTED:
-      wifi_event_ap_stadisconnected_t *disconnect_event = (wifi_event_ap_stadisconnected_t *)event_data;
+    {
+      wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *)event_data;
 
       // Log info about connected station
-      ESP_LOGI(TAG, "Station disconnected. mac =" MACSTR ", AID = %d, reason= %d", MAC2STR(disconnect_event->mac), disconnect_event->aid, disconnect_event->reason);
+      ESP_LOGI(TAG, "Station disconnected. mac =" MACSTR ", AID = %d, reason= %d", MAC2STR(event->mac), event->aid, event->reason);
 
       break;
+    }
     default:
       break;
     }
@@ -117,9 +164,11 @@ void Wifi::eventHandler(esp_event_base_t event_base, int32_t event_id, void *eve
     switch (event_id)
     {
     case IP_EVENT_STA_GOT_IP:
+    {
       ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
       ESP_LOGI(TAG, "IP Address: " IPSTR, IP2STR(&(event->ip_info.ip)));
       break;
+    }
 
     default:
       break;

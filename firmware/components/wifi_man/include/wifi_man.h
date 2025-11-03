@@ -13,10 +13,6 @@
 //
 #include "nvs_flash.h"
 
-static char const *TAG = "wifi";
-
-/* FreeRTOS event group to signal when we are connected*/
-static EventGroupHandle_t s_wifi_event_group;
 
 /* The event group allows multiple bits for each event, but we only care about two events:
  * - we are connected to the AP with an IP
@@ -24,7 +20,36 @@ static EventGroupHandle_t s_wifi_event_group;
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT BIT1
 
+// SAE?
+#if CONFIG_WIFI_STA_WPA3_SAE_PWE_HUNT_AND_PECK
+#define WIFI_SAE_MODE WPA3_SAE_PWE_HUNT_AND_PECK
+#define EXAMPLE_H2E_IDENTIFIER ""
+#elif CONFIG_WIFI_STA_WPA3_SAE_PWE_HASH_TO_ELEMENT
+#define WIFI_SAE_MODE WPA3_SAE_PWE_HASH_TO_ELEMENT
+#define EXAMPLE_H2E_IDENTIFIER CONFIG_WIFI_STA_WPA3_PASSWORD_ID
+#elif CONFIG_WIFI_STA_WPA3_SAE_PWE_BOTH
+#define WIFI_SAE_MODE WPA3_SAE_PWE_BOTH
+#define EXAMPLE_H2E_IDENTIFIER CONFIG_WIFI_STA_WPA3_PASSWORD_ID
+#endif
 
+// Configure auth mode threshold
+#if CONFIG_WIFI_STA_AUTH_OPEN
+#define WIFI_STA_AUTH_MODE_THRESHOLD WIFI_AUTH_OPEN
+#elif CONFIG_WIFI_STA_AUTH_WEP
+#define WIFI_STA_AUTH_MODE_THRESHOLD WIFI_AUTH_WEP
+#elif CONFIG_WIFI_STA_AUTH_WPA_PSK
+#define WIFI_STA_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA_PSK
+#elif CONFIG_WIFI_STA_AUTH_WPA2_PSK
+#define WIFI_STA_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
+#elif CONFIG_WIFI_STA_AUTH_WPA_WPA2_PSK
+#define WIFI_STA_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA_WPA2_PSK
+#elif CONFIG_WIFI_STA_AUTH_WPA3_PSK
+#define WIFI_STA_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA3_PSK
+#elif CONFIG_WIFI_STA_AUTH_WPA2_WPA3_PSK
+#define WIFI_STA_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_WPA3_PSK
+#elif CONFIG_WIFI_STA_AUTH_WAPI_PSK
+#define WIFI_STA_AUTH_MODE_THRESHOLD WIFI_AUTH_WAPI_PSK
+#endif
 
 enum class WifiMode
 {
@@ -37,11 +62,9 @@ class Wifi
 public:
   Wifi(WifiMode mode);
 
-
 private:
   int staRetryMax = 10;
   int staRetryNum = 0;
-
 
 private:
   static void sEventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
