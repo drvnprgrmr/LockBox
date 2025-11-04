@@ -1,11 +1,11 @@
 #include "wifi_man.h"
 
-static char const *const TAG = "wifi";
+static char const *const TAG = "wifi manager";
 
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group;
 
-Wifi::Wifi(WifiMode mode)
+Wifi::Wifi(WifiConf const &conf)
 {
   /* -------------------------------- Init NVS -------------------------------- */
   // initialize the nvs handle
@@ -37,13 +37,13 @@ Wifi::Wifi(WifiMode mode)
   ESP_ERROR_CHECK(esp_event_handler_instance_register(
       IP_EVENT, IP_EVENT_STA_GOT_IP, &sEventHandler, this, nullptr));
 
-  if (mode == WifiMode::STA)
+  if (conf.mode == WifiMode::STA)
   {
     ESP_LOGI(TAG, "Starting WiFi in station mode...");
 
     s_wifi_event_group = xEventGroupCreate();
 
-    esp_netif_create_default_wifi_sta();
+    esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
 
     wifi_config_t wifi_config = {
         .sta = {
@@ -54,8 +54,17 @@ Wifi::Wifi(WifiMode mode)
             },
             .sae_pwe_h2e = WIFI_SAE_MODE,
             .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
-
         }};
+
+    if (conf.hostname.has_value())
+    {
+      // set hostname if given
+      esp_netif_set_hostname(sta_netif, (char *)conf.hostname.value());
+    }
+
+    // set ssid and password
+    strncpy((char *)wifi_config.sta.ssid, (char *)conf.sta.ssid, sizeof(wifi_config.sta.ssid));
+    strncpy((char *)wifi_config.sta.password, (char *)conf.sta.password, sizeof(wifi_config.sta.password));
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
@@ -86,7 +95,7 @@ Wifi::Wifi(WifiMode mode)
       ESP_LOGE(TAG, "UNEXPECTED EVENT!");
     }
   }
-  else if (mode == WifiMode::AP)
+  else if (conf.ap)
   {
     ESP_LOGI(TAG, "Starting WiFi in AP mode...");
 

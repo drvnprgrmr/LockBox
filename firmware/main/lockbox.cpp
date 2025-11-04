@@ -32,7 +32,11 @@ extern "C" void app_main(void)
   esp_log_level_set("*", ESP_LOG_DEBUG);
 
   // begin wifi in sta mode
-  Wifi wifi{WifiMode::STA};
+  WifiConf conf = {
+    .mode = WifiMode::STA,
+    .hostname = "LockBox",
+  };
+  Wifi wifi{conf};
 
   // increase debounce time
   keypad.setDebounceTime(50 * 1000);

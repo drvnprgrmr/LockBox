@@ -1,5 +1,8 @@
 #pragma once
 
+#include <optional>
+#include <array>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -12,7 +15,6 @@
 #include "esp_wifi_netif.h"
 //
 #include "nvs_flash.h"
-
 
 /* The event group allows multiple bits for each event, but we only care about two events:
  * - we are connected to the AP with an IP
@@ -54,13 +56,35 @@
 enum class WifiMode
 {
   STA,
-  AP,
+  AP
 };
+
+typedef struct
+{
+  uint8_t ssid[32] = CONFIG_WIFI_STA_SSID;
+  uint8_t password[64] = CONFIG_WIFI_STA_PASSWORD;
+} WifiStaConf;
+
+typedef struct
+{
+  uint8_t ssid[32];
+  uint8_t password[64];
+} WifiApConf;
+
+
+typedef struct
+{
+  WifiMode mode = WifiMode::STA;
+  std::optional<char const *> hostname;
+
+  WifiStaConf sta;
+  std::optional<WifiApConf> ap;
+} WifiConf;
 
 class Wifi
 {
 public:
-  Wifi(WifiMode mode);
+  Wifi(WifiConf const &conf);
 
 private:
   int staRetryMax = 10;
