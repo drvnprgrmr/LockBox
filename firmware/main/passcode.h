@@ -47,6 +47,8 @@ enum class PasscodeError
   INVALID,       // Passcode entered is invalid
   COOLDOWN,      // Too many wrong attempts, try again after cooldown
   REQUIRE_RESET, // Maximum number of failed attempts, needs to be reset by admin
+
+  SECRET_INVALID_CHAR,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -57,9 +59,11 @@ public:
   Passcode(std::array<gpio_num_t, PASSCODE_LENGTH> inputIndicatorPins, gpio_num_t lockIndicatorPin, gpio_num_t buzzerPin);
   ~Passcode();
 
-  PasscodeError handleInput(char inputChar);
+  PasscodeError handleKeyPress(char inputChar);
+  void handleKeyHold(char inputChar);
 
   esp_err_t setSecret(char const *newSecret);
+  esp_err_t resetSecret();
 
   void print();
 

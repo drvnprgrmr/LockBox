@@ -11,6 +11,7 @@
 #include "door.h"
 #include "passcode.h"
 #include "wifi_man.h"
+#include "http_server.h"
 
 static char const *const TAG = "APP_MAIN";
 
@@ -33,16 +34,25 @@ extern "C" void app_main(void)
 
   // begin wifi in sta mode
   WifiConf conf = {
-    .mode = WifiMode::STA,
-    .hostname = "LockBox",
+      .mode = WifiMode::STA,
+      .hostname = "LockBox",
   };
   Wifi wifi{conf};
+
+  static httpd_handle_t server = NULL;
+  /* Start the server for the first time */
+  server = start_webserver();
+
 
   // increase debounce time
   keypad.setDebounceTime(50 * 1000);
 
+  // set hold time to 30 seconds
+  keypad.setHoldTime(30 * 1000 * 1000);
+
   // begin scanning keys
   keypad.beginScanTask();
+
 
   char keyChar{};
   while (true)
@@ -50,8 +60,13 @@ extern "C" void app_main(void)
     if (keypad.getPressed(keyChar, portMAX_DELAY))
     {
       ESP_LOGD(TAG, "Pressed key: %c", keyChar);
-      passcode.handleInput(keyChar);
-    };
+      passcode.handleKeyPress(keyChar);
+    }
+    else if (keypad.getHeld(keyChar, portMAX_DELAY))
+    {
+      // TODO: Reset 
+    }
+    
     vTaskDelay(1);
   }
 }

@@ -226,7 +226,7 @@ PasscodeError Passcode::validate()
   return PasscodeError::VALID;
 }
 
-PasscodeError Passcode::handleInput(char inputChar)
+PasscodeError Passcode::handleKeyPress(char inputChar)
 {
   // check if the passcode is locked from further tries
   if (m_isLocked)
@@ -302,6 +302,14 @@ PasscodeError Passcode::handleInput(char inputChar)
   return PasscodeError::OK;
 }
 
+void Passcode::handleKeyHold(char inputChar) {
+  // TODO: assign key for resetting secret
+
+  // TODO: assign key for stopping wifi server
+
+  // TODO: assign key for rebooting in wifi AP mode
+}
+
 void Passcode::onValid()
 {
   ESP_LOGI(TAG, "Passcode valid.");
@@ -350,7 +358,7 @@ esp_err_t Passcode::setSecret(char const *newSecret)
   // ensure secret passcode is the right size
   if (secretLen != PASSCODE_LENGTH)
   {
-    ESP_LOGE(TAG, "Passcode must be %d digits.");
+    ESP_LOGE(TAG, "Passcode must be %d digits.", PASSCODE_LENGTH);
     return ESP_FAIL;
   }
 
@@ -387,6 +395,11 @@ esp_err_t Passcode::setSecret(char const *newSecret)
   }
   ESP_LOGV(TAG, "NVS handle closed.");
 
+  return ESP_OK;
+}
+
+esp_err_t Passcode::resetSecret() {
+  // TODO: reset secret and save in nvs
   return ESP_OK;
 }
 
